@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Customer Number in Excel Files</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #check-result {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        .result-item {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Check Customer Number in Excel Files</h1>
+    <input type="file" id="excel-upload" accept=".xls,.xlsx" multiple>
+    <input type="text" id="customer-number" placeholder="Enter customer number">
+    <button id="check-button">Check Customer Number</button>
+    <div id="check-result"></div>
+
+    <script>
+        document.getElementById('check-button').addEventListener('click', () => {
+            const files = document.getElementById('excel-upload').files;
+            const customerNumber = document.getElementById('customer-number').value.trim();
+            const resultElement = document.getElementById('check-result');
+
+            // Reset the results container
+            resultElement.innerHTML = '';
+
+            // Check if files are uploaded and customer number is entered
+            if (files.length === 0 || !customerNumber) {
+                resultElement.textContent = 'Please upload Excel files and enter a customer number.';
+                return;
+            }
+
+            let customerFoundFiles = [];  // To track files where the customer number is found
+            let filesProcessed = 0;
+
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+
+                    workbook.SheetNames.forEach(sheetName => {
+                        const worksheet = workbook.Sheets[sheetName];
+                        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                        json.forEach(row => {
+                            // Assuming customer numbers are in the first column (index 0)
+                            if (row[0] && row[0].toString().trim() === customerNumber) {
+                                // If found, store the file name
+                                if (!customerFoundFiles.includes(file.name)) {
+                                    customerFoundFiles.push(file.name);
+                                }
+                            }
+                        });
+                    });
+
+                    filesProcessed++;
+                    // Once all files are processed
+                    if (filesProcessed === files.length) {
+                        if (customerFoundFiles.length > 0) {
+                            resultElement.innerHTML = `<p>Customer number ${customerNumber} found in the following files:</p>`;
+                            customerFoundFiles.forEach(fileName => {
+                                const listItem = document.createElement('div');
+                                listItem.classList.add('result-item');
+                                listItem.textContent = `- ${fileName}`;
+                                resultElement.appendChild(listItem);
+                            });
+                        } else {
+                            resultElement.textContent = `Customer number ${customerNumber} not found in any uploaded files.`;
+                        }
+                    }
+                };
+
+                reader.readAsArrayBuffer(file);
+            });
+        });
+    </script>
+</body>
+</html>
